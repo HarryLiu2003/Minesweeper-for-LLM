@@ -1,5 +1,12 @@
 # Minesweeper-for-LLM
-This repository provides the code, data, and results for the paper: Assessing Logical Puzzle Solving in Large Language Models: Insights from a Minesweeper Case Study [[arXiv](https://arxiv.org/abs/2311.07387)]
+This repository provides the code, data, and results for the paper: Assessing Logical Puzzle Solving in Large Language Models: Insights from a Minesweeper Case Study [[arXiv](https://arxiv.org/abs/2311.07387)].
+
+
+<p float="left">
+  <img src="./figures/minesweeper.xp.png" width="40%" />
+  <img src="./figures/instr-108.jpg" width="54%" /> 
+</p>
+The figure above shows how humans play Minesweeper (left) and how GPT-3.5-instruct plays it (right).
 
 ## Requirements
 
