@@ -21,7 +21,7 @@ If you are interested in reproducing our results or extending the experiment to 
 Specifically,
 - `ms.py` runs GPT models on the Minesweeper game.
 The arguments of this script are defined in `./src/args.py`.
-Examples of running this script are provided in `./scripts`, where `./5x5.table.sh` tests GPTs on $5\times5$ boards with table representation and in natural conversation mode (please refer to the paper for the description of these terms), and `./5x5.coord-compact.sh` tests on boards with coordinate representation and in compact history mode.
+Examples of running this script are provided in `./scripts`, where `./5x5.table.sh` tests GPTs on $5\times5$ boards with table representation and in natural conversation mode (please refer to the paper for the description of these terms), and `./5x5.coord-ch.sh` tests on boards with coordinate representation and in compact history mode.
 To run these shell scripts, you can use
 ```bash
 ./scripts/5x5.table.sh
@@ -39,7 +39,7 @@ Currently, we have not implemented a script for just playing Minesweeper with GU
 But you can still do this by running the `./assist/lable_board.py` script.
 Specifically,
 ```bash
-PYTHONPATH="." python ./assist/lable_board.py --data_dir [your data dir] --disable_saving
+PYTHONPATH="." python ./assist/label_board.py --data_dir [your data dir] --disable_saving
 ```
 You can either use our provided data or generate Minesweeper boards of your own through `./assist/generate_board.py`.
 

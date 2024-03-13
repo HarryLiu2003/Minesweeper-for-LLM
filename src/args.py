@@ -1,6 +1,6 @@
 """
 # Author: Yinghao Li
-# Modified: November 11th, 2023
+# Modified: February 19th, 2024
 # ---------------------------------------
 # Description: Base classes for arguments and configurations.
 """
@@ -29,6 +29,7 @@ class Arguments:
     mine_cell: str = field(default="*", metadata={"help": "Mine cell symbol"})
     flag_cell: str = field(default="F", metadata={"help": "Flag cell symbol"})
     unchecked_cell: str = field(default="?", metadata={"help": "Unchecked cell symbol"})
+    number_cells: str = field(default=None, metadata={"nargs": "*", "help": "Number cell symbols"})
 
     n_rows: int = field(default=9, metadata={"help": "Number of rows"})
     n_cols: int = field(default=9, metadata={"help": "Number of columns"})
@@ -50,6 +51,7 @@ class Arguments:
     no_example_3: bool = field(default=False, metadata={"help": "whether to exclude example 3."})
 
     output_dir: str = field(default="./output/board-solve/", metadata={"help": "Output directory"})
+    obfuscation: bool = field(default=False, metadata={"help": "Whether to obfuscate the game"})
 
 
 @dataclass
@@ -116,6 +118,9 @@ class Config(Arguments):
                 and self.n_cols == board_dict["n_cols"]
                 and self.n_mines == board_dict["n_mines"]
             ), ValueError(f"Board size mismatch! ")
+
+        if self.number_cells is not None:
+            assert len(self.number_cells) == 8, ValueError(f"Number cell symbols should have 8 elements!")
 
         return self
 

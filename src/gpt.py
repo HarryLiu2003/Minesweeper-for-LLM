@@ -1,6 +1,6 @@
 """
 # Author: Yinghao Li
-# Modified: November 4th, 2023
+# Modified: February 17th, 2024
 # ---------------------------------------
 # Description: GPT api call and message cache.
 """
@@ -98,6 +98,9 @@ class MessageCache:
         for msg in self.message_cache:
             message += f">> {msg['role'].upper()}:\n{msg['content']}\n\n"
         return message
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def print(self) -> None:
         print(self.__str__())

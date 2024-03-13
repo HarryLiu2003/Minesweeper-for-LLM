@@ -1,8 +1,8 @@
 """
 # Author: Yinghao Li
-# Modified: November 8th, 2023
+# Modified: March 13th, 2024
 # ---------------------------------------
-# Description: Test table understanding on cell content retrieval.
+# Description: neighbor counting experiments.
 """
 
 import os.path as osp
@@ -84,7 +84,7 @@ def main(args: Arguments):
         for _ in range(args.n_sample_per_board):
             # randomly sample a cell coordinate to ask
             x, y = random.randint(1, m.n_rows), random.randint(1, m.n_cols)
-            target_symbol = random.choice([m.flag_cell, m.empty_cell, "1", "2"])
+            target_symbol = random.choice([m.flg, m.emt, "1", "2"])
 
             r_start = max(x - 1, 0)
             r_end = min(x + 2, m.n_rows)
@@ -107,12 +107,12 @@ def main(args: Arguments):
                     user_message += f"\n--- EXAMPLES ---\n{prompt.counting_example1}\n--- END OF EXAMPLES ---\n"
 
             if args.use_coordinate_representation:
-                user_message += f"\n--- CURRENT BOARD ---\n{m.to_dict_table()}\n\n"
+                user_message += f"\n--- CURRENT BOARD ---\n{m.to_coord_repr()}\n\n"
                 user_message += f'QUESTION: How many cells "{target_symbol}" are neighbors (including diagonal) of the cell with coordinate ({x},{y})?\n'
                 user_message += "Let's think step by step.\n"
             else:
                 user_message += (
-                    f"\n--- CURRENT BOARD ---\n{m.to_str_table(with_row_column_ids=args.use_row_column_indices)}\n\n"
+                    f"\n--- CURRENT BOARD ---\n{m.to_str_repr(with_row_column_ids=args.use_row_column_indices)}\n\n"
                 )
                 user_message += f"QUESTION: How many cells `{target_symbol}' are neighbors (including diagonal) of the cell with coordinate ({x},{y})?\n"
                 user_message += "Let's think step by step.\n"

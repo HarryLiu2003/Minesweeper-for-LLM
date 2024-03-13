@@ -1,3 +1,10 @@
+"""
+# Author: Yinghao Li
+# Modified: March 13th, 2024
+# ---------------------------------------
+# Description: Minesweeper experiments.
+"""
+
 import os.path as osp
 import sys
 import logging

@@ -1,6 +1,6 @@
 """
 # Author: Yinghao Li
-# Modified: November 4th, 2023
+# Modified: February 19th, 2024
 # ---------------------------------------
 # Description: Implement the minesweeper game.
 # Reference: https://github.com/pyGuru123/Python-Games/tree/master/MineSweeper
@@ -66,6 +66,7 @@ class MineField:
         mine_cell="*",
         flag_cell="F",
         unchecked_cell="?",
+        number_cells=None,
         strict_winning_condition=False,
     ):
         self.n_rows = n_rows
@@ -80,10 +81,12 @@ class MineField:
         self.board_disp_with_index = None
         self.board_disp_prev = None
 
-        self.empty_cell = empty_cell
-        self.mine_cell = mine_cell
-        self.flag_cell = flag_cell
-        self.unchecked_cell = unchecked_cell
+        self.emt = empty_cell
+        self.mine = mine_cell
+        self.flg = flag_cell
+        self.unc = unchecked_cell
+        self.nums_disp = number_cells if number_cells is not None else ["1", "2", "3", "4", "5", "6", "7", "8"]
+        self.num2disp = {str(i): self.nums_disp[i - 1] for i in range(1, 9)}
 
         self.first_move = True
         self.game_over = False
@@ -117,15 +120,15 @@ class MineField:
 
     def init_disp_board(self):
         self.board_disp = np.empty((self.n_rows, self.n_cols), dtype=str)
-        self.board_disp.fill(self.unchecked_cell)
+        self.board_disp.fill(self.unc)
         return self
 
     def infer_board(self):
         self.board_true = np.empty((self.n_rows, self.n_cols), dtype=str)
         for i, j in product(range(self.n_rows), range(self.n_cols)):
             self.board_true[i, j] = str(self.count_mines(i, j))
-        self.board_true[self.board_mine] = self.mine_cell
-        self.board_true[self.board_true == "0"] = self.empty_cell
+        self.board_true[self.board_mine] = self.mine
+        self.board_true[self.board_true == "0"] = self.emt
 
     def on_first_move(self, x, y):
         if self.board_mine is None:
@@ -135,7 +138,7 @@ class MineField:
         self.init_disp_board()
         self.add_index()
 
-        if self.board_true[x, y] == self.mine_cell:
+        if self.board_true[x, y] == self.mine:
             return self.on_game_over()
 
         self.board_disp_prev = copy.deepcopy(self.board_disp)
@@ -169,18 +172,18 @@ class MineField:
             return self.on_first_move(x, y)
 
         # invalid operations
-        if self.board_disp[x, y] == self.flag_cell:
+        if self.board_disp[x, y] == self.flg:
             return ActionFeedback.LEFT_CLICK_FLAG_CELL
-        elif self.board_disp[x, y] == self.empty_cell:
+        elif self.board_disp[x, y] == self.emt:
             return ActionFeedback.LEFT_CLICK_EMPTY_CELL
         elif self.board_disp[x, y] in "12345678":
             return ActionFeedback.LEFT_CLICK_NUMBER_CELL
 
-        if self.board_true[x, y] == self.mine_cell:
+        if self.board_true[x, y] == self.mine:
             return self.on_game_over()
 
         self.board_disp_prev = copy.deepcopy(self.board_disp)
-        if self.board_true[x, y] == self.empty_cell:
+        if self.board_true[x, y] == self.emt:
             self.update_adjacent_cells(x, y)
         # number cell
         else:
@@ -213,14 +216,14 @@ class MineField:
 
         if self.board_disp[x, y] in "12345678":
             return ActionFeedback.RIGHT_CLICK_NUMBER_CELL
-        elif self.board_disp[x, y] == self.empty_cell:
+        elif self.board_disp[x, y] == self.emt:
             return ActionFeedback.RIGHT_CLICK_EMPTY_CELL
 
         self.board_disp_prev = copy.deepcopy(self.board_disp)
-        if self.board_disp[x, y] == self.unchecked_cell:
-            self.board_disp[x, y] = self.flag_cell
-        elif self.board_disp[x, y] == self.flag_cell:
-            self.board_disp[x, y] = self.unchecked_cell
+        if self.board_disp[x, y] == self.unc:
+            self.board_disp[x, y] = self.flg
+        elif self.board_disp[x, y] == self.flg:
+            self.board_disp[x, y] = self.unc
 
         if self.display_on_action:
             self.display()
@@ -247,11 +250,11 @@ class MineField:
         if self.game_over:
             return self.on_game_over()
 
-        if self.board_disp[x, y] == self.empty_cell:
+        if self.board_disp[x, y] == self.emt:
             return ActionFeedback.MIDDLE_CLICK_EMPTY_CELL
-        elif self.board_disp[x, y] == self.flag_cell:
+        elif self.board_disp[x, y] == self.flg:
             return ActionFeedback.MIDDLE_CLICK_FLAG_CELL
-        elif self.board_disp[x, y] == self.unchecked_cell:
+        elif self.board_disp[x, y] == self.unc:
             return ActionFeedback.MIDDLE_CLICK_UNCHECKED_CELL
 
         r_start = max(x - 1, 0)
@@ -259,24 +262,22 @@ class MineField:
         c_start = max(y - 1, 0)
         c_end = min(y + 2, self.n_cols)
 
-        if not np.sum(self.board_disp[r_start:r_end, c_start:c_end] == self.flag_cell):
+        if not np.sum(self.board_disp[r_start:r_end, c_start:c_end] == self.flg):
             return ActionFeedback.MIDDLE_CLICK_NUMBER_CELL_NO_FLAG
 
         if np.any(
-            self.board_true[r_start:r_end, c_start:c_end][
-                self.board_disp[r_start:r_end, c_start:c_end] == self.flag_cell
-            ]
-            != self.mine_cell
+            self.board_true[r_start:r_end, c_start:c_end][self.board_disp[r_start:r_end, c_start:c_end] == self.flg]
+            != self.mine
         ):
             self.board_disp_prev = copy.deepcopy(self.board_disp)
             return self.on_game_over()
 
-        if np.sum(self.board_disp[r_start:r_end, c_start:c_end] == self.flag_cell) != int(self.board_true[x, y]):
+        if np.sum(self.board_disp[r_start:r_end, c_start:c_end] == self.flg) != int(self.board_true[x, y]):
             return ActionFeedback.MIDDLE_CLICK_NUMBER_CELL_NUMBER_MISMATCH
 
         self.board_disp_prev = copy.deepcopy(self.board_disp)
         for i, j in product(range(r_start, r_end), range(c_start, c_end)):
-            if self.board_disp[i, j] == self.flag_cell:
+            if self.board_disp[i, j] == self.flg:
                 continue
             self.update_adjacent_cells(i, j)
 
@@ -296,7 +297,7 @@ class MineField:
         return ActionFeedback.GAME_OVER
 
     def check_game_win(self):
-        if np.all((self.board_disp == self.flag_cell) == self.board_mine):
+        if np.all((self.board_disp == self.flg) == self.board_mine):
             return True
 
         if not self.strict_winning_condition:
@@ -307,15 +308,15 @@ class MineField:
 
     @property
     def n_correctly_flagged_mines(self):
-        number = int(np.sum(self.board_mine[self.board_disp == self.flag_cell]))
+        number = int(np.sum(self.board_mine[self.board_disp == self.flg]))
         return number
 
     def update_adjacent_cells(self, x, y):
-        if not self.is_valid_cell(x, y) or not self.board_disp[x, y] == self.unchecked_cell:
+        if not self.is_valid_cell(x, y) or not self.board_disp[x, y] == self.unc:
             return None
 
-        if self.board_true[x, y] == self.empty_cell:
-            self.board_disp[x, y] = self.empty_cell
+        if self.board_true[x, y] == self.emt:
+            self.board_disp[x, y] = self.emt
 
             for i, j in product(range(x - 1, x + 2), range(y - 1, y + 2)):
                 self.update_adjacent_cells(i, j)
@@ -341,7 +342,7 @@ class MineField:
     def add_index(self):
         if self.board_disp_with_index is None:
             self.board_disp_with_index = np.empty((self.n_rows + 1, self.n_cols + 1), dtype=str)
-            self.board_disp_with_index.fill(self.empty_cell)
+            self.board_disp_with_index.fill(self.emt)
             self.board_disp_with_index[0, :] = np.arange(self.n_cols + 1).astype(str)
             self.board_disp_with_index[1:, 0] = np.arange(1, self.n_rows + 1).astype(str)
         self.board_disp_with_index[1:, 1:] = self.board_disp
@@ -349,30 +350,32 @@ class MineField:
 
     @property
     def n_revealed_cells(self):
-        return int(np.sum(self.board_disp != self.unchecked_cell))
+        return int(np.sum(self.board_disp != self.unc))
 
-    def to_str_table(self, with_row_column_ids=True) -> str:
+    def to_str_repr(self, with_row_column_ids=True) -> str:
         if with_row_column_ids:
             self.add_index()
             str_arr = np.array2string(self.board_disp_with_index, separator=",")
         else:
             str_arr = np.array2string(self.board_disp, separator=",")
         str_arr = re.sub(r"([\[\]])", "", str_arr)
-        str_arr = re.sub(
-            r"'([1-8%s%s%s])'" % (self.empty_cell, self.flag_cell, self.unchecked_cell), r"`\g<1>'", str_arr
-        )
+        str_arr = re.sub(r"'([1-8%s%s%s])'" % (self.emt, self.flg, self.unc), r"`\g<1>'", str_arr)
         if with_row_column_ids:
             str_arr = replace_idx_quotes(str_arr)
         str_arr = tailing_comma.sub("", str_arr)
         str_arr = whitespace_start_end.sub("", str_arr)
+        for k, v in self.num2disp.items():
+            str_arr = str_arr.replace(f"`{k}'", f"`{v}'")
         return str_arr
 
-    def to_dict_table(self) -> dict:
+    def to_coord_repr(self) -> dict:
         coord_value_list = [
             f"({i+1},{j+1}): {self.board_disp[i, j]}" for i, j in product(range(self.n_cols), range(self.n_rows))
         ]
-        coord_value_str = "\n".join(coord_value_list)
-        return coord_value_str
+        coord_str = "\n".join(coord_value_list)
+        for k, v in self.num2disp.items():
+            coord_str = coord_str.replace(f": {k}", f": {v}")
+        return coord_str
 
     def save_board(self, path: str, additional_addribute: Union[list[str], str] = None, **kwargs) -> None:
         if additional_addribute is None:

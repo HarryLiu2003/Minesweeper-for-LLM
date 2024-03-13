@@ -1,8 +1,8 @@
 """
 # Author: Yinghao Li
-# Modified: November 8th, 2023
+# Modified: March 13th, 2024
 # ---------------------------------------
-# Description: Test table understanding on cell content retrieval.
+# Description: Board Navigation experiments.
 """
 
 import os.path as osp
@@ -100,10 +100,10 @@ def main(args: Arguments):
                     user_message += f"\n--- EXAMPLES ---\n{prompt.navigation_example1}\n{prompt.navigation_example2}\n--- END OF EXAMPLES ---\n"
 
             if args.use_coordinate_representation:
-                user_message += f"\n--- CURRENT BOARD ---\n{m.to_dict_table()}\n\n"
+                user_message += f"\n--- CURRENT BOARD ---\n{m.to_coord_repr()}\n\n"
             else:
                 user_message += (
-                    f"\n--- CURRENT BOARD ---\n{m.to_str_table(with_row_column_ids=args.use_row_column_indices)}\n\n"
+                    f"\n--- CURRENT BOARD ---\n{m.to_str_repr(with_row_column_ids=args.use_row_column_indices)}\n\n"
                 )
 
             user_message += f"QUESTION: What is the cell at coordinate ({x},{y})?\n"

@@ -1,12 +1,19 @@
 """
 # Author: Yinghao Li
-# Modified: November 11th, 2023
+# Modified: February 19th, 2024
 # ---------------------------------------
 # Description: Interaction functions
 """
 
 import re
-from .prompts import GamePlayTablePrompt, GamePlayCoordinatePrompt
+from .prompts import (
+    GamePlayTablePrompt,
+    GamePlayCoordinatePrompt,
+    GamePlayCoordinateObfuscationPrompt,
+    Feedback,
+    GamePlayTableObfuscationPrompt,
+    FeedbackWithObfuscation,
+)
 from .game import MineField, ActionFeedback
 from .gpt import GPT, MessageCache
 
@@ -18,6 +25,11 @@ action_map = {
 
 number_cells = ",".join([f"`{i}'" for i in range(1, 8)])
 
+system_prompt = "You are a helpful assistant who is good at playing Minesweeper."
+system_prompt_obfuscation = (
+    "You are a helpful assistant who is good at playing strategic games that requires logical reasoning."
+)
+
 
 class Interaction:
     def __init__(
@@ -28,6 +40,7 @@ class Interaction:
         mine_cell: str = "*",
         flag_cell: str = "F",
         unchecked_cell: str = "?",
+        number_cells: list[str] = None,
         n_rows: int = 9,
         n_cols: int = 9,
         n_mines: int = 10,
@@ -36,6 +49,7 @@ class Interaction:
         represent_board_as_coordinate: bool = False,
         use_compressed_history: bool = False,
         strict_winning_condition: bool = False,
+        obfuscation: bool = False,
         no_example_1: bool = False,
         no_example_2: bool = False,
         no_example_3: bool = False,
@@ -52,6 +66,7 @@ class Interaction:
                 mine_cell=mine_cell,
                 flag_cell=flag_cell,
                 unchecked_cell=unchecked_cell,
+                number_cells=number_cells,
                 strict_winning_condition=strict_winning_condition,
             ).load_board(board_path)
         else:
@@ -64,16 +79,29 @@ class Interaction:
                 mine_cell=mine_cell,
                 flag_cell=flag_cell,
                 unchecked_cell=unchecked_cell,
+                number_cells=number_cells,
                 strict_winning_condition=strict_winning_condition,
             )
 
         self.gpt = GPT(resource_path=gpt_resource_path)
-        self.messages = MessageCache()
         self.represent_board_as_coordinate = represent_board_as_coordinate
+
         if represent_board_as_coordinate:
-            self.prompt = GamePlayCoordinatePrompt(mine_field=self.m)
+            if not obfuscation:
+                self.prompt = GamePlayCoordinatePrompt(mine_field=self.m)
+                self.messages = MessageCache(system_role=system_prompt)
+            else:
+                self.prompt = GamePlayCoordinateObfuscationPrompt(mine_field=self.m)
+                self.messages = MessageCache(system_role=system_prompt_obfuscation)
         else:
-            self.prompt = GamePlayTablePrompt(mine_field=self.m, with_row_column_ids=use_row_column_indices)
+            if not obfuscation:
+                self.prompt = GamePlayTablePrompt(mine_field=self.m, with_row_column_ids=use_row_column_indices)
+                self.messages = MessageCache(system_role=system_prompt)
+            else:
+                self.prompt = GamePlayTableObfuscationPrompt(
+                    mine_field=self.m, with_row_column_ids=use_row_column_indices
+                )
+                self.messages = MessageCache(system_role=system_prompt_obfuscation)
 
         init_examples = (
             f"--- EXAMPLES ---\n"
@@ -82,13 +110,14 @@ class Interaction:
             f"{self.prompt.example_3 if not self.no_example_1 else ''}"
             "--- END OF EXAMPLES ---\n\n"
         )
+        init_table = self.m.to_str_repr() if not represent_board_as_coordinate else self.m.to_coord_repr()
         self.init_prompt = (
             f"{self.prompt.wiki_game}\n"
             f"{self.prompt.action_options}\n"
             f"{self.prompt.action_format}\n"
             f"{self.prompt.action_regulation}\n"
             f"{init_examples}"
-            f"--- CURRENT BOARD ---\n```\n{self.m.to_str_table()}\n```\n\n"
+            f"--- CURRENT BOARD ---\n```\n{init_table}\n```\n\n"
             f"{self.prompt.init_response_guide}"
         )
         self.step_idx = 1
@@ -96,24 +125,14 @@ class Interaction:
         self.action_feedback_list = list()
         self.action_history = list()
 
-        self.game_feedback_to_prompt = {
-            ActionFeedback.SUCCESS: "Action successful!",
-            ActionFeedback.GAME_WIN: "Congratulations, you've won the game!",
-            ActionFeedback.GAME_OVER: "Game over. Better luck next time!",
-            ActionFeedback.UNEXIST_CELL: f"Invalid Coordinates! Please make sure your coordinate are within [1, {self.m.n_rows}] for rows and [1, {self.m.n_cols}] for columns.",
-            ActionFeedback.LEFT_CLICK_EMPTY_CELL: f"Invalid action: Cannot left-click a blank cell. Left-click is only for unopened cells (`{unchecked_cell}').",
-            ActionFeedback.LEFT_CLICK_FLAG_CELL: f"Invalid action: Cannot left-click a flagged cell. Left-click is only for unopened cells (`{unchecked_cell}').",
-            ActionFeedback.LEFT_CLICK_NUMBER_CELL: f"Invalid action: Cannot left-click a numbered cell. Left-click is only for unopened cells (`{unchecked_cell}').",
-            ActionFeedback.MIDDLE_CLICK_EMPTY_CELL: f"Invalid action: Cannot middle-click a blank cell. Middle-click is only for numbered cells (`{number_cells}').",
-            ActionFeedback.MIDDLE_CLICK_FLAG_CELL: f"Invalid action: Cannot middle-click a flagged cell. Middle-click is only for numbered cells (`{number_cells}').",
-            ActionFeedback.MIDDLE_CLICK_UNCHECKED_CELL: f"Invalid action: Cannot middle-click an unopened cell. Middle-click is only for numbered cells (`{number_cells}').",
-            ActionFeedback.RIGHT_CLICK_EMPTY_CELL: f"Invalid action: Cannot right-click a blank cell. Right-click is only for unopened (`{unchecked_cell}') or flagged cells (`{flag_cell}').",
-            ActionFeedback.RIGHT_CLICK_NUMBER_CELL: f"Invalid action: Cannot right-click a numbered cell. Right-click is only for unopened (`{unchecked_cell}') or flagged cells (`{flag_cell}').",
-            ActionFeedback.MIDDLE_CLICK_NUMBER_CELL_NO_FLAG: f"Error: No flagged cells detected nearby. Flag adjacent mines before middle-clicking.",
-            ActionFeedback.MIDDLE_CLICK_NUMBER_CELL_NUMBER_MISMATCH: f"Error: Flag count mismatch. Ensure all adjacent mines are flagged before middle-clicking.",
-            ActionFeedback.START_BY_MIDDLE_CLICK: f"Please begin by left-clicking on a cell.",
-            ActionFeedback.START_BY_RIGHT_CLICK: f"Please begin by left-clicking on a cell.",
-        }
+        if not obfuscation:
+            self.game_feedback_to_prompt = Feedback(
+                m=self.m, unchecked_cell=unchecked_cell, flag_cell=flag_cell, number_cells=number_cells
+            ).game_feedback_to_prompt
+        else:
+            self.game_feedback_to_prompt = FeedbackWithObfuscation(
+                m=self.m, unchecked_cell=unchecked_cell, flag_cell=flag_cell, number_cells=number_cells
+            ).game_feedback_to_prompt
 
     def step(self) -> str:
         self.update_user_prompt()
@@ -153,9 +172,9 @@ class Interaction:
         else:
             prompt = self.feedback_to_prompt()
             if self.represent_board_as_coordinate:
-                prompt += f"--- CURRENT BOARD ---\n```\n{self.m.to_dict_table()}\n```\n\n"
+                prompt += f"--- CURRENT BOARD ---\n```\n{self.m.to_coord_repr()}\n```\n\n"
             else:
-                prompt += f"--- CURRENT BOARD ---\n```\n{self.m.to_str_table()}\n```\n\n"
+                prompt += f"--- CURRENT BOARD ---\n```\n{self.m.to_str_repr()}\n```\n\n"
 
             prompt += f"{self.prompt.action_regulation}\n"
             prompt += "REASONING:\n\nACTION:\n"
@@ -168,9 +187,9 @@ class Interaction:
             self.messages.add_user_message(prompt)
         else:
             if self.represent_board_as_coordinate:
-                current_board = f"--- CURRENT BOARD ---\n```\n{self.m.to_dict_table()}\n```\n"
+                current_board = f"--- CURRENT BOARD ---\n```\n{self.m.to_coord_repr()}\n```\n"
             else:
-                current_board = f"--- CURRENT BOARD ---\n```\n{self.m.to_str_table()}\n```\n"
+                current_board = f"--- CURRENT BOARD ---\n```\n{self.m.to_str_repr()}\n```\n"
 
             examples = (
                 f"--- EXAMPLES ---\n"

@@ -1,6 +1,6 @@
 """
 # Author: Yinghao Li
-# Modified: October 27th, 2023
+# Modified: February 19th, 2024
 # ---------------------------------------
 # Description: GUI for Minesweeper
 """
@@ -157,7 +157,7 @@ class MinesweeperGUI(QMainWindow):
         updated_cells_x, updated_cells_y = np.where(self.m.board_disp != self.m.board_disp_prev)
         for x, y in zip(updated_cells_x, updated_cells_y):
             value = str(self.m.board_disp[x, y])
-            if value == self.m.empty_cell:
+            if value == self.m.emt:
                 value = " "
             self.cells[x][y].setText(value)
 
