@@ -54,7 +54,7 @@ class GPT:
         else:
             r = openai.ChatCompletion.create(
                 messages=messages,
-                engine=self.engine,
+                model=self.engine,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
                 top_p=self.top_p,
