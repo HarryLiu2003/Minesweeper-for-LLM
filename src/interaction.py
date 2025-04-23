@@ -6,6 +6,7 @@
 """
 
 import re
+import logging
 from .prompts import (
     GamePlayTablePrompt,
     GamePlayCoordinatePrompt,
@@ -16,6 +17,8 @@ from .prompts import (
 )
 from .game import MineField, ActionFeedback
 from .gpt import GPT, MessageCache
+
+logger = logging.getLogger(__name__)
 
 action_map = {
     "L": "left_click",
@@ -140,7 +143,16 @@ class Interaction:
         response = self.gpt(self.messages)
         self.messages.add_assistant_message(response)
 
-        action, row_idx, col_idx = self.parse_action_str(response)
+        try:
+            action, row_idx, col_idx = self.parse_action_str(response)
+        except ValueError as e:
+            # Log the prompt (last user message) that led to the error
+            last_prompt = "Could not retrieve last prompt."
+            if self.messages.message_cache and self.messages.message_cache[-2]['role'] == 'user': # [-1] is assistant msg
+                last_prompt = self.messages.message_cache[-2]['content']
+            logger.error(f"Failed to parse action string.\nPROMPT:\n---\n{last_prompt}\n---\nRaw response:\n---\n{response}\n---")
+            raise e # Re-raise the error after logging
+        
         self.action_history.append(f"{action}({row_idx},{col_idx})")
 
         self.action_feedback = self.excute_action(action, row_idx, col_idx)

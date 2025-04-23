@@ -1,0 +1,5 @@
+{
+  "api_type": "open_ai",
+  "api_key": "ENV:OPENAI_API_KEY",
+  "engine": "gpt-4o"
+} 

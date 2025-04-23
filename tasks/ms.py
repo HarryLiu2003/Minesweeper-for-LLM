@@ -48,10 +48,18 @@ def main(args: Arguments):
             if interaction.action_feedback in (ActionFeedback.GAME_WIN, ActionFeedback.GAME_OVER):
                 break
 
+        # Combine action strings and feedback codes into a structured list
+        structured_action_history = []
+        for action_str, feedback_enum in zip(interaction.action_history, interaction.action_feedback_list):
+            structured_action_history.append(
+                {'action_str': action_str, 'feedback': feedback_enum.value} # Use .value for int
+            )
+
         output_dict = {
             "conversation": str(interaction.messages),
-            "action_history": interaction.action_history,
+            "action_history": structured_action_history, # Save the structured list
             "responses": responses,
+            "final_board_disp": interaction.m.board_disp.tolist() # Add final board state
         }
         init_dir(config.output_dir, clear_original_content=False)
         save_json(output_dict, output_path, collapse_level=3)
@@ -79,4 +87,11 @@ if __name__ == "__main__":
         arguments.log_path = osp.join("./logs", f"{_current_file_name}", f"{_time}.log")
 
     set_logging(log_path=arguments.log_path)
+
+    # === Add Check for required argument ===
+    if arguments.gpt_resource_path is None:
+        logger.error("Missing required argument: --gpt_resource_path")
+        sys.exit(1) # Exit if argument is missing
+    # ========================================
+
     main(arguments)

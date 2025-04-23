@@ -25,6 +25,14 @@ class Arguments:
     Arguments regarding the training of Neural hidden Markov Model
     """
 
+    # --- Required arguments first ---
+    seed: int = field(default=42, metadata={"help": "Random seed"})
+    max_steps: int = field(default=100, metadata={"help": "Maximum number of steps"})
+
+    gpt_resource_path: str = field(default=None, metadata={"help": "Path to GPT resources (Required)"})
+
+    # --- Optional arguments with defaults ---
+    board_path_or_dir: str = field(default=None, metadata={"help": "Path to board file"})
     empty_cell: str = field(default=".", metadata={"help": "Empty cell symbol"})
     mine_cell: str = field(default="*", metadata={"help": "Mine cell symbol"})
     flag_cell: str = field(default="F", metadata={"help": "Flag cell symbol"})
@@ -34,11 +42,6 @@ class Arguments:
     n_rows: int = field(default=9, metadata={"help": "Number of rows"})
     n_cols: int = field(default=9, metadata={"help": "Number of columns"})
     n_mines: int = field(default=10, metadata={"help": "Number of mines"})
-    seed: int = field(default=42, metadata={"help": "Random seed"})
-    max_steps: int = field(default=100, metadata={"help": "Maximum number of steps"})
-
-    gpt_resource_path: str = field(default="./resources/gpt35.16k.json", metadata={"help": "Path to GPT resources"})
-    board_path_or_dir: str = field(default=None, metadata={"help": "Path to board file"})
 
     strict_winning_condition: bool = field(default=False, metadata={"help": "Whether to use strict winning condition"})
     use_row_column_indices: bool = field(default=False, metadata={"help": "whether to use row and column indices."})
@@ -76,7 +79,7 @@ class Config(Arguments):
 
         Returns
         -------
-        self (type: BertConfig)
+        self
         """
         arg_elements = {
             attr: getattr(args, attr)
